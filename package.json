@@ -1,7 +1,12 @@
 {
   "name": "vow",
   "description": "Almost sound Promises for Bucklescript",
-  "keywords": ["bucklescript", "reason", "ocaml", "promise"],
+  "keywords": [
+    "bucklescript",
+    "reason",
+    "ocaml",
+    "promise"
+  ],
   "scripts": {
     "build": "bsb -make-world",
     "clean": "bsb -clean-world",
@@ -16,6 +21,6 @@
   "repository": "wokalski/vow",
   "version": "0.0.2",
   "devDependencies": {
-    "bs-platform": "^1.9.3"
+    "bs-platform": "^2.1.0"
   }
 }
