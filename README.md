@@ -25,13 +25,13 @@ However if you put a `Js.Promise.t` inside a `vow` (which are boxed `Js.Promise.
 ```reason
 /* in Reason syntax */
 
-vow (Js.Promise.t 'a) 'status
+vow(Js.Promise.t('a), 'status)
 ```
 However, under the scenes it'll really be
 
 ```reason
 
-vow 'a 'status
+vow('a, 'status)
 ```
 
 Therefore `vow` is not sound.
@@ -47,51 +47,52 @@ If you `unsafeWrap` a promise which does throw your code will be unsound.
 Let's see a real world example of vows with some comments:
 
 ```reason
-let login _: Vow.Result.t authenticationState error Vow.handled =>
+let login = (_) : Vow.Result.t(authenticationState, error, Vow.handled) =>
   /* Returns a handled Vow.Result.t */
-  Login.logIn () |>
+  Login.logIn()
   /* Validates the returned value. Since the vow is handled we don't need to catch*/
-  Vow.Result.map (
-    fun x =>
-      if x##isCancelled {
-        Vow.Result.fail LoginRequestCancelled
-      } else {
-        Vow.Result.return ()
-      }
-  ) |>
+  |> Vow.Result.map(
+       (x) =>
+         if (x##isCancelled) {
+           Vow.Result.fail(LoginRequestCancelled)
+         } else {
+           Vow.Result.return()
+         }
+     )
   /* Another handled Vow.Result.t */
-  Vow.Result.map Login.getCurrentAccessToken () |>
-  Vow.Result.map (
-    fun x => {
-      let token = x##accessToken;
-      /* This returns an unhandled Vow.Result.t.
-       * Note that the 'error types have to match
-       * Because after one error the subsequent operations
-       * Are not performed.
-       */
-      Queries.login ::token
-    }
-  ) |>
+  |> Vow.Result.map(Login.getCurrentAccessToken, ())
+  |> Vow.Result.map(
+       (x) => {
+         let token = x##accessToken;
+        /* This returns an unhandled Vow.Result.t.
+         * Note that the 'error types have to match
+         * Because after one error the subsequent operations
+         * Are not performed.
+         */
+         Queries.login(~token=token)
+       }
+     ) 
   /* Ooops, the `Queries.login` might reject.
    * We are forced to handle it in the compile time.
    */
-  Vow.Result.onError (fun _ => Vow.Result.fail GraphQlSignInError) |>
-  Vow.Result.map (
-    fun x =>
-      switch x {
-      | Authenticated {token, userId} =>
-        /* The promise we wrap is never rejected */
-        Vow.unsafeWrap
-          KeyChain.(
-            Js.Promise.all2 (
-              setGenericPassword username::"userId" password::userId service::"userId",
-              setGenericPassword username::"token" password::token service::"token"
-            )
-          ) |>
-        Vow.map (fun _ => Vow.Result.return x)
-      | _ => Vow.Result.return x
-      }
-  );
+  |> Vow.Result.onError((_) => Vow.Result.fail(GraphQlSignInError))
+  |> Vow.Result.map(
+       (x) =>
+         switch x {
+         | Authenticated({token, userId}) =>
+           /* The promise we wrap is never rejected */
+           Vow.unsafeWrap(
+             KeyChain.(
+               Js.Promise.all2((
+                 setGenericPassword(~username="userId", ~password=userId, ~service="userId"),
+                 setGenericPassword(~username="token", ~password=token, ~service="token")
+               ))
+             )
+           )
+           |> Vow.map((_) => Vow.Result.return(x))
+         | _ => Vow.Result.return(x)
+         }
+     );
 ```
 
 ## Author
